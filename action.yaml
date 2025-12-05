@@ -4,10 +4,17 @@ branding:
   icon: check-circle
   color: green
 inputs:
-  path:
-    description: "Path to the Sigma rules"
+  paths:
+    description: "Paths to the Sigma rules (can be a newline-separated list of paths or files)"
     required: false
     default: "./"
+  schemaURL:
+    description: "URL of the JSON schema"
+    required: false
+    default: "https://raw.githubusercontent.com/SigmaHQ/sigma-specification/main/sigma-schema.json"
+  schemaFile:
+    description: "Path to the local JSON schema"
+    required: false
 runs:
   using: "composite"
   steps:
@@ -18,9 +25,19 @@ runs:
       uses: actions/setup-python@v5
     - name: Install dependencies
       shell: bash
-      run: pip install check-jsonschema
+      run: pip install requests check-jsonschema
     - name: Validate Sigma rules
       shell: bash
-      run: ${{ github.action_path }}/validate.sh
+      run: |
+        # echo "Downloading validate.py from Sigma repository"
+        # wget -O ${{ github.action_path }}/validate.py https://raw.githubusercontent.com/SigmaHQ/sigma/master/tests/validate-sigma-schema/validate.py
+
+        echo "Validating Sigma rules against sigma-schema.json"
+        echo $(python ${{ github.action_path }}/validate.py envs)
+        echo $(sudo -E python ${{ github.action_path }}/validate.py envs)
+        echo $(sudo -E python ${{ github.action_path }}/validate.py rules)
+        check-jsonschema --schemafile $(python ${{ github.action_path }}/validate.py schema) $(sudo -E python ${{ github.action_path }}/validate.py rules)
       env:
-        SIGMA_RULES_PATH: ${{ inputs.path }}
+        SIGMA_RULES_PATH: ${{ inputs.paths }}
+        SIGMA_SCHEMA_URL: ${{ inputs.schemaURL }}
+        SIGMA_SCHEMA_FILE: ${{ inputs.schemaFile }}
